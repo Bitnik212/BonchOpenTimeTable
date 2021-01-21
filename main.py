@@ -7,7 +7,7 @@ import json
 from Classes import *
 from timetable.main import timetable as tt
 
-app = FastAPI(title="Bonch Open TimeTable", version="0.5.0", description="Это апи для <a href='http://cabinet.sut.ru/raspisanie_all_new.php' target=_blank>источника</a>. если его снесут то это апи бесмысленно.")
+app = FastAPI(title="Bonch Open TimeTable", version="0.8.0", description="Это апи для <a href='http://cabinet.sut.ru/raspisanie_all_new.php' target=_blank>источника</a>. если его снесут то это апи бесмысленно.")
 
 
 @app.post("/tt/all", tags=["Полное расписание"], summary="Получение полного расписания", responses=errorcodes)
@@ -22,7 +22,7 @@ async def getall(year: str = Form(..., description="семестр"),
     t = tt()
     try:
 
-        res = t.getTimeTable(year, str(type_z), str(facultetid), str(kurs), str(groupid))
+        res = t.getTimeTable(year, type_z=str(type_z), facultetid=str(facultetid), kurs=str(kurs), groupid=str(groupid))
         try:
             if res["error"] == 404:
                 return JSONResponse(status_code=res["error"], content=res)
@@ -44,8 +44,7 @@ async def getallget(year: str = "205.2021/2",
     """
     t = tt()
     try:
-
-        res = t.getTimeTable(year, str(type_z), str(facultetid), str(kurs), str(groupid))
+        res = t.getTimeTable(year=year, type_z=str(type_z), facultetid=str(facultetid), kurs=str(kurs), groupid=str(groupid))
         try:
             if res["error"] == 404:
                 return JSONResponse(status_code=res["error"], content=res)
@@ -75,7 +74,7 @@ async def getfacult(year: str = "205.2021/2", type_z: int = 1):
         return JSONResponse(status_code=500)
 
 
-@app.get("/course", tags=["Номер курса"], summary="Получение номеров куосов", responses=errorcodes)
+@app.get("/course", tags=["Номер курса"], summary="Получение номеров курсов", responses=errorcodes)
 async def getcourse(facultetId: int):
     """
     Получение номеров куосов. хз как должно быть но сделал как на сайте.
@@ -128,4 +127,51 @@ async def getyears():
         return JSONResponse(status_code=200, content=res["years"])
     except:
         return JSONResponse(status_code=500)
+
+
+@app.get("/week/education", tags=["Неделя"], summary="Получение номера учебной недели", responses=errorcodes)
+async def getweekeducation():
+    """
+    Получение номера учебной недели
+    """
+    t = tt()
+    try:
+        return JSONResponse(status_code=200, content={"weekEducation": t.getEdWeek()})
+    except:
+        return JSONResponse(status_code=500)
+
+@app.get("/curse/today", tags=["Расписание"], summary="Получение расписания на сегодня", responses=errorcodes)
+async def getCurseToday(facultetId: int, kurs: int, groupid: int, type_z: int = 1, year: str = "205.2021/2"):
+    """
+    Получение расписания на сегодня
+    """
+    t = tt()
+    try:
+        res = t.getToDayTimeTable(facultetId= facultetId, kurs=kurs, type_z=type_z, year=year, groupid=groupid)
+        try:
+            if res["error"] == 404:
+                return JSONResponse(status_code=res["error"], content=res)
+        except:
+            pass
+        return JSONResponse(status_code=200, content=res)
+    except:
+        return JSONResponse(status_code=500)
+
+@app.get("/curse/forday", tags=["Расписание"], summary="Получение расписания на день недели", responses=errorcodes)
+async def getCurseForday(facultetId: int, kurs: int, groupid: int, type_z: int = 1, year: str = "205.2021/2", weekDay: int = 0):
+    """
+    Получение расписания на определенный день недели. Понедельник - 1 ... Воскресенье - 7. 0 - на сегодня
+    """
+    t = tt()
+    try:
+        res = t.getToDayTimeTable(facultetId= facultetId, kurs=kurs, type_z=type_z, year=year, weekDay=weekDay, groupid=groupid)
+        try:
+            if res["error"] == 404:
+                return JSONResponse(status_code=res["error"], content=res)
+        except:
+            pass
+        return JSONResponse(status_code=200, content=res)
+    except:
+        return JSONResponse(status_code=500)
+
 

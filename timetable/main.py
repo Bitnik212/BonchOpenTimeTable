@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 import requests as req
 import json, re
-
+import datetime
 
 class timetable:
     domain = "http://cabinet.sut.ru/raspisanie_all_new.php?"
@@ -10,6 +10,7 @@ class timetable:
     kurs = "&kurs=" # номер курса
     groupid = "&group=" # id группы
     year = "&schet=" # период обучения
+    daysListBig=["", "Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"]
 
 
     def getYears (self) :
@@ -63,11 +64,11 @@ class timetable:
         :return: list
         """
         if facultet == "56682":
-            return [1, 2]
+            return [{"name": 1, 'value': 1}, {"name": 2, 'value': 2}]
         elif facultet == 56682:
-            return [1, 2]
+            return [{"name": 1, 'value': 1}, {"name": 2, 'value': 2}]
         else:
-            return [1, 2, 3, 4, 5]
+            return [{"name": 1, 'value': 1}, {"name": 2, 'value': 2}, {"name": 3, 'value': 3}, {"name": 4, 'value': 4}, {"name": 5, 'value': 5}]
     def getGroups (self, facultet: int, type_z: int, schet: str, kurs: int):
         """
         Получить весь спикок групп
@@ -93,17 +94,27 @@ class timetable:
             return {'error': 500}
 
 
-    def getTimeTable(self, year, type_z, facultetid, kurs, groupid):
+    def getTimeTable(self, year: str, facultetid: int, kurs: int, groupid: int, type_z: int = 1):
+        """
+        Получение расписания по параметрам.
+
+        :param year: семестр
+        :param type_z: тип расписания
+        :param facultetid:  id факультета
+        :param kurs: номер курса
+        :param groupid: id курса
+        :return: dict
+        """
         link = self.domain + \
                self.type_z + \
-               type_z + \
+               str(type_z) + \
                self.facultyid + \
-               facultetid + \
+               str(facultetid) + \
                self.kurs+kurs + \
                self.groupid + \
-               groupid + \
+               str(groupid) + \
                self.year + \
-               year
+               str(year)
         soup = BeautifulSoup(req.get(link).text, 'html.parser')
         timetableresp = {"timetable": []}
         if soup.find(string=re.compile("Занятий для выбранной группы не найдено")) is not None:
@@ -177,6 +188,12 @@ class timetable:
         return timetableresp['timetable']
 
     def getInfoAboutLesson(self, lesson): # ожидается тэг <div class="pair" weekday="2" pair="2"> с его содержимым
+        """
+        Парсер предмета
+
+        :param lesson: Предмет
+        :return: dict
+        """
         predmet = {'predmet': []}
         typeLesson = {'typeLesson': []}
         studyWeeks = {'studyWeeks':[]}
@@ -226,8 +243,76 @@ class timetable:
         }
         return data['data']
 
+    def getEdWeek(self):
+        """
+        Получение номера учебной недели
+
+        :return: int
+        """
+        yyear = datetime.date.today().year
+        today = datetime.datetime.now()
+        then = datetime.datetime(yyear-1, 9, 1)
+        edweek = round((((today - then).days/7)+1))
+        return edweek
+
+    def curseOnCurrentWeek(self, parsedWeeks: list):
+        """
+        Проверка на то есть ли сегодня эта пара или нет
+
+        :param weeks: список спаршенных номеров недель
+        :return: Bool
+        """
+        edWeek = self.getEdWeek()
+        for week in parsedWeeks:
+            if int(week) == edWeek:
+                return True
+        return False
+
+    def parseWeekNumber(self, weeks: list):
+        """
+        парсер номеров недель
+
+        :param weeks: список не спаршенных недель
+        :return: list
+        """
+        parsedWeeks = []
+        for week in weeks:
+            weekparsed = week.replace('*', '').replace("н", '')
+            parsedWeeks.append(weekparsed)
+        return parsedWeeks
+
+    def getToDayTimeTable(self, year: str, facultetid: int, kurs: int, groupid: int, type_z: int = 1, weekDay: int = None):
+        """
+
+        :param year: семестр
+        :param type_z: тип расписания
+        :param facultetid:  id факультета
+        :param kurs: номер курса
+        :param groupid: id курса
+        :return:
+        """
+        date = datetime.datetime.now()
+        if weekDay == None or weekDay == 0:
+            nowWeekDay = date.weekday()+1
+        elif weekDay >= 7:
+          return {"error": 404 }
+        else:
+            nowWeekDay = weekDay
+
+        tt = self.getTimeTable(year=year, facultetid=facultetid, kurs=kurs, groupid=groupid, type_z=type_z)
+        days = self.daysListBig
+        toDayCurse = []
+        for item in tt[nowWeekDay][days[nowWeekDay]]:
+            weeks = item['lesson']['studyWeeks']
+            parsedWeeks = self.parseWeekNumber(weeks)
+            if self.curseOnCurrentWeek(parsedWeeks):
+                toDayCurse.append(item)
+
+        return toDayCurse
+
 
 # tt = timetable()
+# print(tt.getToDayTimeTable(year="205.2021/2", type_z='1', facultetid="50554", kurs='3', groupid='53954', weekDay= 0))
 # print(str(tt.getTimeTable("205.2021/2", '1', "50554", '3', '53954')).replace("'", '"'))
 # print(tt.getGroups(50554, 1, "205.2021/2", 3)) # получение списка групп
 # print(tt.getCourse(50554)) # получение количество курсов
