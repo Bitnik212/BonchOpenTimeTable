@@ -107,14 +107,17 @@ class timetable:
         """
         link = self.domain + \
                self.type_z + \
-               str(type_z) + \
+               str(int(type_z)) + \
                self.facultyid + \
                str(facultetid) + \
-               self.kurs+kurs + \
+               self.kurs+ \
+               str(kurs) + \
                self.groupid + \
                str(groupid) + \
                self.year + \
                str(year)
+
+        type_z = str(type_z)
         soup = BeautifulSoup(req.get(link).text, 'html.parser')
         timetableresp = {"timetable": []}
         if soup.find(string=re.compile("Занятий для выбранной группы не найдено")) is not None:
@@ -151,7 +154,7 @@ class timetable:
                             for column in row.find_all('div', attrs={'class':'pair'}): # здесь уже смотрим саму ячейку
                                 temp = self.getInfoAboutLesson(column)
                                 # print(temp[0])
-                                timetableresp['timetable'][day][keys[day]].append({'lesson':temp[0], 'para':para[ipara-1]})
+                                timetableresp['timetable'][day][keys[day]].append({'lesson':temp[0], 'para':para[ipara-1], "id": str(self.getEdWeek())+"_"+str(keys[day])+"_"+para[ipara-1]['para']+"_"+para[ipara-1]['time']})
                         else:
                             day += 1
                             continue
@@ -237,7 +240,7 @@ class timetable:
                     'predmet': predmet['predmet'],
                     'studyWeeks':studyWeeks['studyWeeks'],
                     'teachers':teachers['teachers'],
-                    'lectureHall':lectureHall['lectureHall']
+                    'lectureHall':lectureHall['lectureHall'],
                 }
             ]
         }
@@ -289,7 +292,7 @@ class timetable:
         :param facultetid:  id факультета
         :param kurs: номер курса
         :param groupid: id курса
-        :return:
+        :return: list
         """
         date = datetime.datetime.now()
         if weekDay == None or weekDay == 0:
@@ -302,6 +305,7 @@ class timetable:
         tt = self.getTimeTable(year=year, facultetid=facultetid, kurs=kurs, groupid=groupid, type_z=type_z)
         days = self.daysListBig
         toDayCurse = []
+        # print(tt)
         for item in tt[nowWeekDay][days[nowWeekDay]]:
             weeks = item['lesson']['studyWeeks']
             parsedWeeks = self.parseWeekNumber(weeks)

@@ -146,16 +146,17 @@ async def getCurseToday(facultetId: int, kurs: int, groupid: int, type_z: int = 
     Получение расписания на сегодня
     """
     t = tt()
+
+    # try:
+    res = t.getToDayTimeTable(facultetid=facultetId, kurs=kurs, type_z=type_z, year=year, groupid=groupid)
     try:
-        res = t.getToDayTimeTable(facultetId= facultetId, kurs=kurs, type_z=type_z, year=year, groupid=groupid)
-        try:
-            if res["error"] == 404:
-                return JSONResponse(status_code=res["error"], content=res)
-        except:
-            pass
-        return JSONResponse(status_code=200, content=res)
+        if res["error"] == 404:
+            return JSONResponse(status_code=res["error"], content=res)
     except:
-        return JSONResponse(status_code=500)
+        pass
+    return JSONResponse(status_code=200, content=res)
+    # except:
+    #     return JSONResponse(status_code=500)
 
 @app.get("/curse/forday", tags=["Расписание"], summary="Получение расписания на день недели", responses=errorcodes)
 async def getCurseForday(facultetId: int, kurs: int, groupid: int, type_z: int = 1, year: str = "205.2021/2", weekDay: int = 0):
@@ -164,7 +165,7 @@ async def getCurseForday(facultetId: int, kurs: int, groupid: int, type_z: int =
     """
     t = tt()
     try:
-        res = t.getToDayTimeTable(facultetId= facultetId, kurs=kurs, type_z=type_z, year=year, weekDay=weekDay, groupid=groupid)
+        res = t.getToDayTimeTable(facultetid=facultetId, kurs=kurs, type_z=type_z, year=year, weekDay=weekDay, groupid=groupid)
         try:
             if res["error"] == 404:
                 return JSONResponse(status_code=res["error"], content=res)
